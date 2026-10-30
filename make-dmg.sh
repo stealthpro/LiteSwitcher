@@ -1,8 +1,8 @@
 #!/bin/sh
-# Builds LightSwitcher in Release and packages it as a compressed .dmg
+# Builds LiteSwitcher in Release and packages it as a compressed .dmg
 # with an /Applications shortcut, so the app can be dragged into place.
 #
-#   ./make-dmg.sh          writes dist/LightSwitcher.dmg
+#   ./make-dmg.sh          writes dist/LiteSwitcher.dmg
 #
 # The app is only as signed as the Release build: it is not notarized, so
 # on another Mac Gatekeeper will block it until the user allows it in
@@ -11,9 +11,9 @@ set -eu
 
 cd "$(dirname "$0")"
 
-APP_NAME=LightSwitcher
+APP_NAME=LiteSwitcher
 OUT_DIR=dist
-WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/lightswitcher-dmg.XXXXXX")
+WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/liteswitcher-dmg.XXXXXX")
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 echo "Building $APP_NAME (Release)..."

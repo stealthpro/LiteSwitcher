@@ -8,7 +8,7 @@ enum KeyInjector {
     /// Posting blocks until the window server accepts the event, and the window server waits for our event tap, which
     /// runs on the main thread. Posting from the main thread could therefore deadlock and freeze all input, so events
     /// are posted on this queue instead.
-    private nonisolated static let queue = DispatchQueue(label: "LightSwitcher.KeyInjector")
+    private nonisolated static let queue = DispatchQueue(label: "LiteSwitcher.KeyInjector")
 
     /// Deletes `count` characters before the cursor, then types `text`, replacing the current selection if there is one.
     /// With `keepSelected`, the typed text is selected afterwards so the next switch can convert it back.
