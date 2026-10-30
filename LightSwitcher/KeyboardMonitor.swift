@@ -98,6 +98,13 @@ final class KeyboardMonitor {
         return false
     }
 
+    /// The word a press converts: the last word typed, plus any spaces after it.
+    var lastWord: String {
+        guard let end = typedWord.lastIndex(where: { !$0.isWhitespace }) else { return "" }
+        let start = typedWord[..<end].lastIndex(where: { $0.isWhitespace }).map { typedWord.index(after: $0) } ?? typedWord.startIndex
+        return String(typedWord[start...])
+    }
+
     /// Remembers converted text, so pressing the shortcut again right away converts it back.
     func rememberConversion(_ converted: String) {
         typedWord = converted
@@ -127,7 +134,7 @@ final class KeyboardMonitor {
         default:
             let text = event.unicodeString
             guard !text.isEmpty else { return } // dead keys produce nothing until the next key
-            // Spaces stay in the text so a whole phrase can be converted; control characters (such as Return) end it.
+            // Spaces stay in the text so `lastWord` can keep the spaces after a word; control characters (such as Return) end the text.
             if text.unicodeScalars.contains(where: { $0.value < 0x20 }) {
                 typedWord = ""
             } else {

@@ -32,7 +32,7 @@ The app converts text typed on one keyboard layout into what the same physical k
 A press acts on the selection if there is one, otherwise on typed text:
 
 - **Selected text** is converted and stays selected, so the next press converts it back.
-- **Typed text** is the text typed since the last click, Enter, Tab, Escape, navigation key, shortcut, or secure input. It is converted and replaced, and the result is remembered so the next press converts it back. Typing after a conversion starts a new phrase, which leaves the converted text unconverted.
+- **Typed text** is the text typed since the last click, Enter, Tab, Escape, navigation key, shortcut, or secure input. A press converts only the last word of it, plus any spaces after that word (`KeyboardMonitor.lastWord`), so `привет мир ` becomes `привет vibe `. The result is remembered so the next press converts it back. Typing after a conversion starts a new phrase, which leaves the converted text unconverted.
 - Otherwise the app beeps.
 
 ## Architecture
