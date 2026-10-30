@@ -4,15 +4,15 @@ Guidance for Claude Code when working in this repository.
 
 ## Commands
 
-The Xcode project is `LightSwitcher.xcodeproj` (one target, one scheme: `LightSwitcher`). There are no tests or linter.
+The Xcode project is `LiteSwitcher.xcodeproj` (one target, one scheme: `LiteSwitcher`). There are no tests or linter.
 
 ```sh
 # Debug build (Apple Silicon)
-xcodebuild -project LightSwitcher.xcodeproj -scheme LightSwitcher -configuration Debug \
+xcodebuild -project LiteSwitcher.xcodeproj -scheme LiteSwitcher -configuration Debug \
   -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/ls-build build
-open /tmp/ls-build/Build/Products/Debug/LightSwitcher.app
+open /tmp/ls-build/Build/Products/Debug/LiteSwitcher.app
 
-# Release DMG at dist/LightSwitcher.dmg (not notarized)
+# Release DMG at dist/LiteSwitcher.dmg (not notarized)
 ./make-dmg.sh
 ```
 

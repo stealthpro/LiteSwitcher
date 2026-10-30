@@ -85,8 +85,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showPermissionAlert() {
         let alert = NSAlert()
-        alert.messageText = "LightSwitcher needs permissions"
-        alert.informativeText = "Allow LightSwitcher under Accessibility in System Settings → Privacy & Security. The app restarts by itself once it is allowed."
+        alert.messageText = "LiteSwitcher needs permissions"
+        alert.informativeText = "Allow LiteSwitcher under Accessibility in System Settings → Privacy & Security. The app restarts by itself once it is allowed."
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Later")
         if alert.runModal() == .alertFirstButtonReturn,
@@ -97,12 +97,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "LightSwitcher")
+        item.button?.image = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "LiteSwitcher")
 
         let menu = NSMenu()
         menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit LightSwitcher", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit LiteSwitcher", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.menu = menu
         statusItem = item
     }
@@ -117,7 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 defer: false
             )
             window.contentView = NSHostingView(rootView: SettingsView(settings: settings))
-            window.title = "LightSwitcher"
+            window.title = "LiteSwitcher"
             window.isReleasedWhenClosed = false
             window.center()
             settingsWindow = window
