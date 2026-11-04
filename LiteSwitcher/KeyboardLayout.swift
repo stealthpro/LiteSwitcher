@@ -64,20 +64,49 @@ struct KeyboardLayout {
     }
 }
 
-/// Converts text typed on one layout into what the same physical keys produce on another.
+/// Converts text typed on one layout into what the same physical keys produce on the other, in both directions.
+/// Each word is converted in the direction its letters belong to, so a selection can mix both layouts.
 struct LayoutConverter {
-    private var map: [Character: Character] = [:]
+    /// Source characters mapped to target characters, and the reverse.
+    private var forward: [Character: Character]
+    private var backward: [Character: Character]
 
     init(from source: KeyboardLayout, to target: KeyboardLayout) {
-        let targetCharacters = Dictionary(Self.strokes(of: target), uniquingKeysWith: { first, _ in first })
-        for (stroke, character) in Self.strokes(of: source) where map[character] == nil {
-            map[character] = targetCharacters[stroke]
-        }
+        forward = Self.map(from: source, to: target)
+        backward = Self.map(from: target, to: source)
     }
 
-    /// Characters outside either layout (digits shared by both, emoji, etc.) are kept as they are.
+    /// Words are separated by whitespace, which is kept as it is. Characters outside either layout (digits shared by
+    /// both, emoji, etc.) are kept as they are too.
     func convert(_ text: String) -> String {
-        String(text.map { map[$0] ?? $0 })
+        var result = ""
+        var word = ""
+        for character in text {
+            if character.isWhitespace {
+                result += convertWord(word) + String(character)
+                word = ""
+            } else {
+                word.append(character)
+            }
+        }
+        return result + convertWord(word)
+    }
+
+    private func convertWord(_ word: String) -> String {
+        // Characters both layouts produce (digits, some punctuation) say nothing about which layout the word is in.
+        let forwardLetters = word.filter { forward[$0] != nil && backward[$0] == nil }.count
+        let backwardLetters = word.filter { backward[$0] != nil && forward[$0] == nil }.count
+        let map = backwardLetters > forwardLetters ? backward : forward
+        return String(word.map { map[$0] ?? $0 })
+    }
+
+    private static func map(from source: KeyboardLayout, to target: KeyboardLayout) -> [Character: Character] {
+        var map: [Character: Character] = [:]
+        let targetCharacters = Dictionary(strokes(of: target), uniquingKeysWith: { first, _ in first })
+        for (stroke, character) in strokes(of: source) where map[character] == nil {
+            map[character] = targetCharacters[stroke]
+        }
+        return map
     }
 
     /// A physical key plus modifier state, in the form UCKeyTranslate expects.

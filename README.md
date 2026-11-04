@@ -6,7 +6,7 @@ It never switches layouts or rewrites text on its own. You press the shortcut wh
 
 ## Features
 
-- **Convert a selection.** Select text and press the shortcut. The text is converted and stays selected, so pressing the shortcut again converts it back.
+- **Convert a selection.** Select text and press the shortcut. The text is converted and the selection is cleared. Each word is converted to the other layout, so mixed-language text converts in both directions.
 - **Convert typed text.** With no selection, the shortcut converts the text you typed since your last click, Enter, Tab, Escape, navigation key, or shortcut. The result is remembered, so pressing the shortcut again converts it back.
 - **Switch layout.** After each conversion, the app selects the other keyboard layout.
 - **Customizable shortcut.** The default is ⌃⌘ (Control + Command). You can record a different shortcut in Settings, including modifier-only shortcuts.
@@ -54,7 +54,7 @@ Accessibility permission is tied to the app's code signature. After rebuilding, 
 
 1. Type text with the wrong layout active, or select it.
 2. Press the shortcut (⌃⌘ by default).
-3. Press it again to convert back.
+3. To convert typed text back, press it again. A converted selection can't be converted back this way.
 
 The menu bar item shows the app's menu, including Settings and Quit. LiteSwitcher has no Dock icon and no window.
 
