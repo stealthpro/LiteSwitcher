@@ -11,9 +11,8 @@ enum KeyInjector {
     private nonisolated static let queue = DispatchQueue(label: "LiteSwitcher.KeyInjector")
 
     /// Deletes `count` characters before the cursor, then types `text`, replacing the current selection if there is one.
-    /// With `keepSelected`, the typed text is selected afterwards so the next switch can convert it back.
     /// `done` runs on the main thread after the events have been posted.
-    static func replace(deleting count: Int, with text: String, keepSelected: Bool = false, then done: @escaping @MainActor () -> Void) {
+    static func replace(deleting count: Int, with text: String, then done: @escaping @MainActor () -> Void) {
         queue.async {
             for _ in 0..<count {
                 postKey(CGKeyCode(kVK_Delete))
@@ -29,12 +28,6 @@ enum KeyInjector {
             }
             if !chunk.isEmpty {
                 postText(chunk)
-            }
-            if keepSelected {
-                // The cursor is at the end of the typed text, and each Shift+Left extends the selection back by one character.
-                for _ in 0..<text.count {
-                    postKey(CGKeyCode(kVK_LeftArrow), flags: .maskShift)
-                }
             }
             DispatchQueue.main.async { MainActor.assumeIsolated { done() } }
         }
