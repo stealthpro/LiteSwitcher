@@ -73,7 +73,7 @@ The menu bar item shows the app's menu, including Settings and Quit. LiteSwitche
 | `LiteSwitcher/SettingsView.swift` | Settings window |
 | `make-dmg.sh` | Release build and DMG packaging |
 
-`CLAUDE.md` has more detail on threading and architecture for contributors.
+`AGENTS.md` has more detail on threading and architecture for contributors.
 
 ## License
 
