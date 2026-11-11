@@ -109,16 +109,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showSettings() {
         if settingsWindow == nil {
-            // A fixed content size: the hosting controller reported no height, so the window collapsed to its title bar.
+            let hostingView = NSHostingView(rootView: SettingsView(settings: settings))
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 440, height: 260),
+                contentRect: NSRect(x: 0, y: 0, width: 440, height: 300),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
             )
-            window.contentView = NSHostingView(rootView: SettingsView(settings: settings))
+            window.contentView = hostingView
             window.title = "LiteSwitcher"
             window.isReleasedWhenClosed = false
+            // Size the window to the SwiftUI content, so there is no empty space below the last control.
+            hostingView.layoutSubtreeIfNeeded()
+            let fitted = hostingView.fittingSize
+            if fitted.height > 1 {
+                window.setContentSize(NSSize(width: 440, height: fitted.height))
+            }
             window.center()
             settingsWindow = window
         }

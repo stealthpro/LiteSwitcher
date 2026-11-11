@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -24,24 +25,35 @@ struct SettingsView: View {
                         .foregroundStyle(.red)
                 }
 
-                LabeledContent("Switch layout") {
-                    HStack {
-                        Button(shortcutLabel) {
-                            if settings.isRecordingHotkey {
-                                settings.cancelRecordingHotkey()
-                            } else {
-                                settings.beginRecordingHotkey()
-                            }
+                HStack {
+                    Text("Switch layout")
+                    Spacer()
+                    Button(shortcutLabel) {
+                        if settings.isRecordingHotkey {
+                            settings.cancelRecordingHotkey()
+                        } else {
+                            settings.beginRecordingHotkey()
                         }
-                        .frame(minWidth: 110)
+                    }
+                    .frame(minWidth: 110, alignment: .trailing)
 
-                        if settings.hotkey != .defaultShortcut {
-                            Button("Reset") { settings.hotkey = .defaultShortcut }
-                        }
+                    if settings.hotkey != .defaultShortcut {
+                        Button("Reset") { settings.hotkey = .defaultShortcut }
                     }
                 }
             } footer: {
-                Text("Select text, or place the cursor after text you typed, then press the shortcut. The text is converted to the next keyboard layout and the layout is switched. Press Escape while recording to cancel.")
+                Text("Select text, or place the cursor right after the last word you typed, then press the shortcut. The selection, or that word, is converted to the next keyboard layout and the layout is switched. Press Escape while recording the shortcut to cancel.")
+            }
+
+            Section {
+                LabeledContent("Version", value: appVersion)
+                HStack {
+                    Spacer()
+                    Button("Quit LiteSwitcher") {
+                        NSApp.terminate(nil)
+                    }
+                    Spacer()
+                }
             }
         }
         .formStyle(.grouped)
@@ -50,5 +62,9 @@ struct SettingsView: View {
 
     private var shortcutLabel: String {
         settings.isRecordingHotkey ? "Press shortcut…" : settings.hotkey.displayString
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
     }
 }
