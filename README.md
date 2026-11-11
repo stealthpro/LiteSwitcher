@@ -26,7 +26,7 @@ LiteSwitcher is not sandboxed. The sandbox blocks the global keyboard event tap 
 
 ### Download a build
 
-Build the DMG yourself with `make-dmg.sh` (see below), open it, and drag LiteSwitcher into Applications. The build is not notarized, so on another Mac you need to allow it in **System Settings → Privacy & Security** before it opens.
+Download the latest DMG from [Releases](https://github.com/stealthpro/LiteSwitcher/releases/latest), open it, and drag LiteSwitcher into Applications. The build is not notarized, so on another Mac you need to allow it in **System Settings → Privacy & Security** before it opens.
 
 ### Build from source
 
@@ -44,7 +44,7 @@ To package a release DMG at `dist/LiteSwitcher.dmg`:
 ./make-dmg.sh
 ```
 
-The DMG opens into a styled Finder window (big icons, the app on the left, Applications on the right, custom background). That layout is produced by `dmgbuild` — install it once with `pip3 install dmgbuild`. Without it, `make-dmg.sh` still works but falls back to a plain window. The background artwork lives in `dmg/` and can be regenerated with `python3 dmg/make-background.py`.
+The DMG opens into a styled Finder window (big icons, the app on the left, Applications on the right, and an arrow between them over a custom background). That layout is produced by `dmgbuild` — install it once with `pip3 install dmgbuild`. Without it, `make-dmg.sh` still works but falls back to a plain window. The background artwork lives in `dmg/` (`background.png` and `background@2x.png`) and can be regenerated with `python3 dmg/make-background.py`, which needs Pillow (`pip3 install pillow`).
 
 ## Granting Accessibility permission
 
@@ -58,20 +58,25 @@ Accessibility permission is tied to the app's code signature. After rebuilding, 
 2. Press the shortcut (⌃⌘ by default).
 3. To convert typed text back, press it again. A converted selection can't be converted back this way.
 
-The menu bar item shows the app's menu, including Settings and Quit. LiteSwitcher has no Dock icon and no window.
+The menu bar item shows the app's menu, including Settings and Quit. LiteSwitcher has no Dock icon and no window. The Settings window also shows the app version and has its own Quit button.
 
 ## Project layout
 
 | File | Purpose |
 | --- | --- |
 | `LiteSwitcher/AppDelegate.swift` | Menu bar item, permission alert, and conversion flow |
+| `LiteSwitcher/main.swift` | Entry point; creates the app delegate |
 | `LiteSwitcher/KeyboardMonitor.swift` | Event tap, shortcut matching, and the typing buffer |
 | `LiteSwitcher/KeyboardLayout.swift` | Reads layouts through Text Input Sources and builds the converter |
 | `LiteSwitcher/TextInput.swift` | Types replacement text and reads selections through Accessibility |
 | `LiteSwitcher/Hotkey.swift` | Shortcut model |
 | `LiteSwitcher/AppSettings.swift` | Saved preferences, shortcut recording, and launch-at-login |
-| `LiteSwitcher/SettingsView.swift` | Settings window |
+| `LiteSwitcher/SettingsView.swift` | Settings window, with the version and a Quit button |
 | `make-dmg.sh` | Release build and DMG packaging |
+| `dmg/settings.py` | dmgbuild window layout for the installer |
+| `dmg/make-background.py` | Draws the installer background (needs Pillow) |
+
+Release builds are written to `dist/`, which is git-ignored.
 
 `AGENTS.md` has more detail on threading and architecture for contributors.
 

@@ -16,7 +16,11 @@ open /tmp/ls-build/Build/Products/Debug/LiteSwitcher.app
 ./make-dmg.sh
 ```
 
-The app is a menu bar app (`LSUIElement`): no Dock icon and no window. Quit it from its menu bar item.
+`make-dmg.sh` styles the DMG window with `dmgbuild` (`pip3 install dmgbuild`) and falls back to a plain window without it. The background it uses is committed in `dmg/`; regenerate it with `python3 dmg/make-background.py` (`pip3 install pillow`).
+
+The version comes from `MARKETING_VERSION` in `LiteSwitcher.xcodeproj/project.pbxproj` (both build configurations), with `CURRENT_PROJECT_VERSION` as the build number. `Info.plist` is generated from the `INFOPLIST_KEY_*` build settings, so there is no plist file to edit. Settings shows `CFBundleShortVersionString` only, so the build number never appears in the UI.
+
+The app is a menu bar app (`LSUIElement`): no Dock icon and no window. Quit it from its menu bar item or from the button in Settings.
 
 ## Constraints
 
@@ -24,6 +28,8 @@ The app is a menu bar app (`LSUIElement`): no Dock icon and no window. Quit it f
 - **Accessibility only.** The permission is checked at launch (`AppDelegate.startMonitoring`). The event tap does not need Input Monitoring. Permission is tied to the build's signature, so a rebuild can reset it. When the permission is missing at launch, the app waits for it and restarts itself once it is granted (`AppDelegate.relaunchWhenTrusted`).
 - **Threading.** Default actor isolation is `MainActor` (Swift 5.0). The event tap callback runs on the main run loop. `KeyInjector` posts events on its own queue, because `CGEvent.post` blocks until the window server accepts the event, and the window server waits on the main-thread tap. Posting from main can freeze all input. Keep any other code that touches the tap or TIS on the main thread.
 - **Deployment target macOS 14.0**, required by the two-parameter `onChange` in `SettingsView`.
+- **Settings window sizing.** `AppDelegate.showSettings` sets the window height from `NSHostingView.fittingSize` instead of a literal, so a row added to `SettingsView` cannot leave empty space below the last control. `fittingSize` is correct after `layoutSubtreeIfNeeded()` and before the window is shown. Only the width (440) is fixed.
+- **Grouped `Form` layout.** On macOS 26 the visible capsule of a `Button` inside a grouped `Form` row is centred in its frame, so an explicit width alone leaves a gap on the right. To right-align the shortcut button, use `.frame(minWidth: 110, alignment: .trailing)`. A button that should be centred in its row needs `HStack { Spacer(); …; Spacer() }`, not `.frame(maxWidth: .infinity)`.
 
 ## Behavior
 
@@ -43,6 +49,6 @@ A press flows through `KeyboardMonitor` (event tap, hotkey match, typing buffer)
 - `KeyboardLayout.swift`: reads layouts through TIS and `UCKeyTranslate`, and builds `LayoutConverter`. The converter maps only unmodified and Shift strokes. Option layers are left out because on Cyrillic layouts they hold Latin letters (Option+ф is `d`), which would convert text in both directions. Characters outside both layouts (digits, emoji, Option symbols) pass through unchanged.
 - `TextInput.swift`: `KeyInjector` types text and keeps a selection (Shift+Left) when asked. `SelectionReader` reads the selected text through Accessibility.
 - `AppDelegate.swift`: menu bar item, permission alert, and conversion orchestration. `main.swift` creates the delegate and runs the application.
-- `Hotkey.swift`: the shortcut model. `AppSettings.swift`: preferences stored as JSON in `UserDefaults` under `switchHotkey`, shortcut recording, and `LaunchAtLogin` (`SMAppService`). `SettingsView.swift`: the Settings window.
+- `Hotkey.swift`: the shortcut model. `AppSettings.swift`: preferences stored as JSON in `UserDefaults` under `switchHotkey`, shortcut recording, and `LaunchAtLogin` (`SMAppService`). `SettingsView.swift`: the Settings window — launch-at-login toggle, shortcut recorder with a `Reset` button, the app version, and a Quit button. Escape cancels shortcut recording.
 
 **Loop prevention:** `KeyInjector` tags each posted event with `KeyInjector.marker` in `eventSourceUserData`. `KeyboardMonitor` ignores tagged events, so injected text is never treated as typing.
