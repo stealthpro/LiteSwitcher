@@ -44,6 +44,8 @@ To package a release DMG at `dist/LiteSwitcher.dmg`:
 ./make-dmg.sh
 ```
 
+The DMG opens into a styled Finder window (big icons, the app on the left, Applications on the right, custom background). That layout is produced by `dmgbuild` — install it once with `pip3 install dmgbuild`. Without it, `make-dmg.sh` still works but falls back to a plain window. The background artwork lives in `dmg/` and can be regenerated with `python3 dmg/make-background.py`.
+
 ## Granting Accessibility permission
 
 LiteSwitcher needs Accessibility access to watch keystrokes and insert converted text. On first launch, an alert offers to open System Settings. Enable LiteSwitcher under **Privacy & Security → Accessibility**. The app then restarts itself.
