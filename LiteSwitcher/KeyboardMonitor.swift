@@ -13,6 +13,8 @@ final class KeyboardMonitor {
     /// True right after a conversion, when `typedWord` holds the converted text rather than typing.
     private var typedWordIsConverted = false
     var onHotkey: (() -> Void)?
+    /// Whether a password field has secure input on. A closure so tests can state the answer themselves.
+    var isSecureInputEnabled: () -> Bool = { IsSecureEventInputEnabled() }
 
     private var tap: CFMachPort?
     private var modifierComboHeld = false
@@ -46,7 +48,8 @@ final class KeyboardMonitor {
         return true
     }
 
-    private func handle(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
+    /// Returns the event to pass on, or nil to swallow it. Internal so tests can drive it without a real tap.
+    func handle(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
         switch type {
         case .tapDisabledByTimeout:
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
@@ -56,12 +59,14 @@ final class KeyboardMonitor {
             if AXIsProcessTrusted(), let tap { CGEvent.tapEnable(tap: tap, enable: true) }
 
         case .keyDown where event.getIntegerValueField(.eventSourceUserData) != KeyInjector.marker:
-            if modifierComboHeld { modifierComboUsedByKey = true }
+            // A held key repeats keyDown; only the first one counts, so the shortcut does not fire again and again.
+            let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
             let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
             let modifiers = NSEvent.ModifierFlags(cgFlags: event.flags)
+            if !isRepeat, modifierComboHeld { modifierComboUsedByKey = true }
             if !isSuspended, let key = hotkey.keyCode, key == keyCode, modifiers == hotkey.flags {
-                fireHotkey()
-                return nil // swallow the shortcut so the app underneath doesn't receive it
+                if !isRepeat { fireHotkey() }
+                return nil // swallow the shortcut, repeats included, so the app underneath doesn't receive it
             }
             trackTyping(keyCode: keyCode, modifiers: modifiers, event: event)
 
@@ -82,7 +87,8 @@ final class KeyboardMonitor {
 
     /// Modifier-only shortcuts fire when the first of their keys is released, as long as no other key was pressed
     /// or extra modifier added while holding them. Returns true when the shortcut has just completed.
-    private func updateModifierCombo(_ held: NSEvent.ModifierFlags) -> Bool {
+    /// Returns true when the shortcut has just completed. Internal so tests can drive the state machine directly.
+    func updateModifierCombo(_ held: NSEvent.ModifierFlags) -> Bool {
         let target = hotkey.flags
         if modifierComboHeld {
             if !held.subtracting(target).isEmpty {
@@ -119,8 +125,13 @@ final class KeyboardMonitor {
     }
 
     private func trackTyping(keyCode: UInt16, modifiers: NSEvent.ModifierFlags, event: CGEvent) {
+        trackTyping(keyCode: keyCode, modifiers: modifiers, text: event.unicodeString)
+    }
+
+    /// Internal so tests can feed text without building a `CGEvent`.
+    func trackTyping(keyCode: UInt16, modifiers: NSEvent.ModifierFlags, text: String) {
         // Shortcuts and secure input (passwords) are never remembered.
-        if !modifiers.isDisjoint(with: [.command, .control]) || IsSecureEventInputEnabled() {
+        if !modifiers.isDisjoint(with: [.command, .control]) || isSecureInputEnabled() {
             typedWord = ""
             return
         }
@@ -132,7 +143,6 @@ final class KeyboardMonitor {
              kVK_Home, kVK_End, kVK_PageUp, kVK_PageDown:
             typedWord = ""
         default:
-            let text = event.unicodeString
             guard !text.isEmpty else { return } // dead keys produce nothing until the next key
             // Spaces stay in the text so `lastWord` can keep the spaces after a word; control characters (such as Return) end the text.
             if text.unicodeScalars.contains(where: { $0.value < 0x20 }) {

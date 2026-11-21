@@ -11,17 +11,20 @@ final class AppSettings: ObservableObject {
     @Published var hotkey: Hotkey {
         didSet {
             if let data = try? JSONEncoder().encode(hotkey) {
-                UserDefaults.standard.set(data, forKey: Self.hotkeyKey)
+                defaults.set(data, forKey: Self.hotkeyKey)
             }
         }
     }
     @Published private(set) var isRecordingHotkey = false
 
+    private let defaults: UserDefaults
     private var recordingMonitor: Any?
     private var heldModifiers: NSEvent.ModifierFlags = []
 
-    init() {
-        if let data = UserDefaults.standard.data(forKey: Self.hotkeyKey),
+    /// `defaults` is a parameter so tests can use a throwaway suite instead of the user's preferences.
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        if let data = defaults.data(forKey: Self.hotkeyKey),
            let saved = try? JSONDecoder().decode(Hotkey.self, from: data) {
             hotkey = saved
         } else {
@@ -48,7 +51,8 @@ final class AppSettings: ObservableObject {
     }
 
     /// Escape cancels. A key needs Control, Option or Command. A modifier-only shortcut needs two modifiers (e.g. ⌃⌘).
-    private func record(_ event: NSEvent) -> NSEvent? {
+    /// Internal so tests can feed events without a window.
+    func record(_ event: NSEvent) -> NSEvent? {
         let modifiers = event.modifierFlags.intersection(.shortcutModifiers)
 
         if event.type == .keyDown {

@@ -4,7 +4,7 @@ Guidance for AI coding agents when working in this repository.
 
 ## Commands
 
-The Xcode project is `LiteSwitcher.xcodeproj` (one target, one scheme: `LiteSwitcher`). There are no tests or linter.
+The Xcode project is `LiteSwitcher.xcodeproj` with two targets: the `LiteSwitcher` app and the `LiteSwitcherTests` unit-test bundle. The shared scheme `LiteSwitcher` builds the app and runs the tests. There is no linter.
 
 ```sh
 # Debug build (Apple Silicon)
@@ -12,11 +12,23 @@ xcodebuild -project LiteSwitcher.xcodeproj -scheme LiteSwitcher -configuration D
   -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/ls-build build
 open /tmp/ls-build/Build/Products/Debug/LiteSwitcher.app
 
+# Unit tests (71 cases, headless)
+xcodebuild test -project LiteSwitcher.xcodeproj -scheme LiteSwitcher \
+  -destination 'platform=macOS,arch=arm64' -parallel-testing-enabled NO
+
 # Release DMG at dist/LiteSwitcher.dmg (not notarized)
 ./make-dmg.sh
 ```
 
-`make-dmg.sh` styles the DMG window with `dmgbuild` (`pip3 install dmgbuild`) and falls back to a plain window without it. The background it uses is committed in `dmg/`; regenerate it with `python3 dmg/make-background.py` (`pip3 install pillow`).
+## Tests
+
+`LiteSwitcherTests/` covers the logic that does not need a real session: the shortcut model, the typing buffer and modifier-combo state machines in `KeyboardMonitor`, `LayoutConverter`, the event chunking in `KeyInjector`, and `AppSettings` persistence and recording. Tests that read the installed layouts run against the real ones when the machine has the U.S. and a Russian layout, and skip otherwise.
+
+The test bundle compiles the app's logic sources directly instead of hosting the app, so running tests never launches the menu bar app, installs an event tap, or asks for Accessibility permission. To keep that true, `main.swift`, `AppDelegate.swift`, `SettingsView.swift` and the asset catalog are excluded from the test target through the exception set on the `LiteSwitcher` file-system-synchronized group in `project.pbxproj`. A new logic file under `LiteSwitcher/` is picked up automatically; a new UI-only file needs an entry in that exception set.
+
+Not covered, because they need a system session: reading the selection through Accessibility, posting synthetic events, and `TISSelectInputSource`. `KeyboardMonitor.handle` and `trackTyping`, `KeyboardMonitor.updateModifierCombo`, `AppSettings.record`, and the `defaults`/`isSecureInputEnabled` inputs exist as internal seams for the tests; keep them when refactoring.
+
+The DMG window is styled by `dmgbuild` (`pip3 install dmgbuild`) and falls back to a plain window without it. The background it uses is committed in `dmg/`; regenerate it with `python3 dmg/make-background.py` (`pip3 install pillow`).
 
 The version comes from `MARKETING_VERSION` in `LiteSwitcher.xcodeproj/project.pbxproj` (both build configurations), with `CURRENT_PROJECT_VERSION` as the build number. `Info.plist` is generated from the `INFOPLIST_KEY_*` build settings, so there is no plist file to edit. Settings shows `CFBundleShortVersionString` only, so the build number never appears in the UI.
 

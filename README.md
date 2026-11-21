@@ -44,6 +44,15 @@ To package a release DMG at `dist/LiteSwitcher.dmg`:
 ./make-dmg.sh
 ```
 
+To run the unit tests:
+
+```sh
+xcodebuild test -project LiteSwitcher.xcodeproj -scheme LiteSwitcher \
+  -destination 'platform=macOS,arch=arm64' -parallel-testing-enabled NO
+```
+
+The tests need no Accessibility permission and never launch the app: the test bundle compiles the conversion logic directly.
+
 The DMG opens into a styled Finder window (big icons, the app on the left, Applications on the right, and an arrow between them over a custom background). That layout is produced by `dmgbuild` — install it once with `pip3 install dmgbuild`. Without it, `make-dmg.sh` still works but falls back to a plain window. The background artwork lives in `dmg/` (`background.png` and `background@2x.png`) and can be regenerated with `python3 dmg/make-background.py`, which needs Pillow (`pip3 install pillow`).
 
 ## Granting Accessibility permission
@@ -72,6 +81,7 @@ The menu bar item shows the app's menu, including Settings and Quit. LiteSwitche
 | `LiteSwitcher/Hotkey.swift` | Shortcut model |
 | `LiteSwitcher/AppSettings.swift` | Saved preferences, shortcut recording, and launch-at-login |
 | `LiteSwitcher/SettingsView.swift` | Settings window, with the version and a Quit button |
+| `LiteSwitcherTests/` | Unit tests for the converter, the typing buffer, shortcuts and settings |
 | `make-dmg.sh` | Release build and DMG packaging |
 | `dmg/settings.py` | dmgbuild window layout for the installer |
 | `dmg/make-background.py` | Draws the installer background (needs Pillow) |

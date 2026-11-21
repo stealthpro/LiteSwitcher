@@ -72,8 +72,16 @@ struct LayoutConverter {
     private var backward: [Character: Character]
 
     init(from source: KeyboardLayout, to target: KeyboardLayout) {
-        forward = Self.map(from: source, to: target)
-        backward = Self.map(from: target, to: source)
+        self.init(
+            forward: Self.map(from: source, to: target),
+            backward: Self.map(from: target, to: source)
+        )
+    }
+
+    /// Builds a converter from explicit maps. Tests use this instead of reading the system's layouts.
+    init(forward: [Character: Character], backward: [Character: Character]) {
+        self.forward = forward
+        self.backward = backward
     }
 
     /// Words are separated by whitespace, which is kept as it is. Characters outside either layout (digits shared by

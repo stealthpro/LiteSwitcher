@@ -17,20 +17,29 @@ enum KeyInjector {
             for _ in 0..<count {
                 postKey(CGKeyCode(kVK_Delete))
             }
-            // Keyboard events carry at most a short run of UTF-16 units, so send the text in pieces.
-            var chunk = ""
-            for character in text {
-                if chunk.utf16.count + character.utf16.count > 16 {
-                    postText(chunk)
-                    chunk = ""
-                }
-                chunk.append(character)
-            }
-            if !chunk.isEmpty {
+            for chunk in chunks(of: text) {
                 postText(chunk)
             }
             DispatchQueue.main.async { MainActor.assumeIsolated { done() } }
         }
+    }
+
+    /// Splits text into pieces one keyboard event can carry: an event holds at most a short run of UTF-16 units.
+    /// Characters are never split, so a single character longer than `maxUTF16` stays whole.
+    static func chunks(of text: String, maxUTF16: Int = 16) -> [String] {
+        var result: [String] = []
+        var chunk = ""
+        for character in text {
+            if chunk.utf16.count + character.utf16.count > maxUTF16 {
+                result.append(chunk)
+                chunk = ""
+            }
+            chunk.append(character)
+        }
+        if !chunk.isEmpty {
+            result.append(chunk)
+        }
+        return result
     }
 
     private nonisolated static func postText(_ text: String) {
