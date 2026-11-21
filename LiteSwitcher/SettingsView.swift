@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
+    @State private var loginNeedsApproval = LaunchAtLogin.requiresApproval
     @State private var loginError: String?
 
     var body: some View {
@@ -18,7 +19,13 @@ struct SettingsView: View {
                             loginError = error.localizedDescription
                             launchAtLogin = LaunchAtLogin.isEnabled
                         }
+                        loginNeedsApproval = LaunchAtLogin.requiresApproval
                     }
+                if loginNeedsApproval {
+                    Text("Approve LiteSwitcher in System Settings → General → Login Items.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if let loginError {
                     Text(loginError)
                         .font(.caption)
@@ -58,6 +65,11 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 440)
+        .onAppear {
+            // The window is reused, so pick up changes made in System Settings while it was closed.
+            launchAtLogin = LaunchAtLogin.isEnabled
+            loginNeedsApproval = LaunchAtLogin.requiresApproval
+        }
     }
 
     private var shortcutLabel: String {

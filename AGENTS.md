@@ -12,7 +12,7 @@ xcodebuild -project LiteSwitcher.xcodeproj -scheme LiteSwitcher -configuration D
   -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/ls-build build
 open /tmp/ls-build/Build/Products/Debug/LiteSwitcher.app
 
-# Unit tests (71 cases, headless)
+# Unit tests (72 cases, headless)
 xcodebuild test -project LiteSwitcher.xcodeproj -scheme LiteSwitcher \
   -destination 'platform=macOS,arch=arm64' -parallel-testing-enabled NO
 
@@ -43,6 +43,7 @@ Commit messages describe the change and nothing else. Do not add `Co-Authored-By
 - **Unsandboxed** (`ENABLE_APP_SANDBOX = NO`). The sandbox blocks the global event tap and posted key events.
 - **Accessibility only.** The permission is checked at launch (`AppDelegate.startMonitoring`). The event tap does not need Input Monitoring. Permission is tied to the build's signature, so a rebuild can reset it. When the permission is missing at launch, the app waits for it and restarts itself once it is granted (`AppDelegate.relaunchWhenTrusted`).
 - **Threading.** Default actor isolation is `MainActor` (Swift 5.0). The event tap callback runs on the main run loop. `KeyInjector` posts events on its own queue, because `CGEvent.post` blocks until the window server accepts the event, and the window server waits on the main-thread tap. Posting from main can freeze all input. Keep any other code that touches the tap or TIS on the main thread.
+- **The hot path is the event tap.** Everything it calls runs on the main thread, so anything slow there freezes keyboard input system-wide. `AppDelegate.switchLayout()` therefore checks the typed word before asking Accessibility, and `SelectionReader` keeps its messaging timeout at 0.3 s. Do not move the Accessibility query back in front of the typed-word check, and do not raise the timeout.
 - **Deployment target macOS 14.0**, required by the two-parameter `onChange` in `SettingsView`.
 - **Settings window sizing.** `AppDelegate.showSettings` sets the window height from `NSHostingView.fittingSize` instead of a literal, so a row added to `SettingsView` cannot leave empty space below the last control. `fittingSize` is correct after `layoutSubtreeIfNeeded()` and before the window is shown. Only the width (440) is fixed.
 - **Grouped `Form` layout.** On macOS 26 the visible capsule of a `Button` inside a grouped `Form` row is centred in its frame, so an explicit width alone leaves a gap on the right. To right-align the shortcut button, use `.frame(minWidth: 110, alignment: .trailing)`. A button that should be centred in its row needs `HStack { Spacer(); …; Spacer() }`, not `.frame(maxWidth: .infinity)`.
@@ -64,7 +65,7 @@ A press flows through `KeyboardMonitor` (event tap, hotkey match, typing buffer)
 - `KeyboardMonitor.swift`: owns the tap. Clears the typing buffer on shortcuts, navigation keys, Enter/Tab/Escape, mouse clicks, and secure input. Ignores its own injected events.
 - `KeyboardLayout.swift`: reads layouts through TIS and `UCKeyTranslate`, and builds `LayoutConverter`. The converter maps only unmodified and Shift strokes. Option layers are left out because on Cyrillic layouts they hold Latin letters (Option+ф is `d`), which would convert text in both directions. Characters outside both layouts (digits, emoji, Option symbols) pass through unchanged.
 - `TextInput.swift`: `KeyInjector` types text and keeps a selection (Shift+Left) when asked. `SelectionReader` reads the selected text through Accessibility.
-- `AppDelegate.swift`: menu bar item, permission alert, and conversion orchestration. `main.swift` creates the delegate and runs the application.
-- `Hotkey.swift`: the shortcut model. `AppSettings.swift`: preferences stored as JSON in `UserDefaults` under `switchHotkey`, shortcut recording, and `LaunchAtLogin` (`SMAppService`). `SettingsView.swift`: the Settings window — launch-at-login toggle, shortcut recorder with a `Reset` button, the app version, and a Quit button. Escape cancels shortcut recording.
+- `AppDelegate.swift`: menu bar item, permission alert, and conversion orchestration. `switchLayout()` tries the typed word first and only asks `SelectionReader` when there is none, and it caches the last `LayoutConverter` for the current layout pair. `main.swift` creates the delegate and runs the application.
+- `Hotkey.swift`: the shortcut model. `AppSettings.swift`: preferences stored as JSON in `UserDefaults` under `switchHotkey`, shortcut recording, and `LaunchAtLogin` (`SMAppService`, where a login item that still needs approval counts as on). `SettingsView.swift`: the Settings window — launch-at-login toggle with an approval hint, shortcut recorder with a `Reset` button, the app version, and a Quit button. Escape cancels shortcut recording, and closing the window cancels it too so the global shortcut is never left suspended.
 
 **Loop prevention:** `KeyInjector` tags each posted event with `KeyInjector.marker` in `eventSourceUserData`. `KeyboardMonitor` ignores tagged events, so injected text is never treated as typing.

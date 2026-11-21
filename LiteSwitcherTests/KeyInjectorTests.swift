@@ -27,11 +27,16 @@ final class KeyInjectorTests: XCTestCase {
         XCTAssertEqual(chunks.joined(), emoji)
     }
 
-    func testACharacterIsNeverSplitEvenWhenItIsLongerThanTheLimit() {
+    func testAZWJSequenceStaysInOneChunk() {
         let family = "👨‍👩‍👧‍👦" // one Character, eleven UTF-16 units
-        XCTAssertGreaterThan(family.utf16.count, 10)
         let chunks = KeyInjector.chunks(of: family + family + family)
         XCTAssertEqual(chunks, [family, family, family])
+    }
+
+    func testACharacterLongerThanTheLimitIsStillNotSplit() {
+        let stressed = "a" + String(repeating: "\u{0301}", count: 20) // 21 UTF-16 units, one Character
+        XCTAssertGreaterThan(stressed.utf16.count, 16)
+        XCTAssertEqual(KeyInjector.chunks(of: stressed), [stressed])
     }
 
     func testJoiningTheChunksReturnsTheInput() {

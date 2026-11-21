@@ -2,20 +2,28 @@ import AppKit
 import Combine
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let settings = AppSettings()
     private lazy var monitor = KeyboardMonitor(hotkey: settings.hotkey)
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
     private var subscriptions = Set<AnyCancellable>()
     private var permissionTimer: Timer?
+    /// The last converter that was built. Building one translates every key of both layouts, which is wasted
+    /// work when the same pair is used again.
+    private var cachedConverter: (source: String, target: String, converter: LayoutConverter)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         settings.$hotkey
             .sink { [weak self] in self?.monitor.hotkey = $0 }
             .store(in: &subscriptions)
         settings.$isRecordingHotkey
-            .sink { [weak self] in self?.monitor.isSuspended = $0 }
+            .sink { [weak self] recording in
+                guard let self else { return }
+                self.monitor.isSuspended = recording
+                // Keys pressed while recording are not typing, so they must not end up in the remembered word.
+                if recording { self.monitor.typedWord = "" }
+            }
             .store(in: &subscriptions)
         monitor.onHotkey = { [weak self] in self?.switchLayout() }
 
@@ -23,28 +31,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startMonitoring()
     }
 
-    /// Converts the selection, or the word typed before the cursor, to the other keyboard layout.
+    /// Converts the typed word, or the selection, to the other keyboard layout.
     private func switchLayout() {
         guard let source = KeyboardLayout.current(),
               let target = KeyboardLayout.next(after: source) else {
             NSSound.beep()
             return
         }
-        let converter = LayoutConverter(from: source, to: target)
+        let converter = converter(from: source, to: target)
+        let word = monitor.lastWord
 
-        if let selection = SelectionReader.selectedText(), !selection.isEmpty {
-            monitor.typedWord = ""
-            // Replaces the selection, leaving the cursor at its end with nothing selected.
-            KeyInjector.replace(deleting: 0, with: converter.convert(selection)) { target.select() }
-        } else if !monitor.lastWord.isEmpty {
-            let word = monitor.lastWord
+        // Typed text is checked first even though a selection takes precedence in principle: a selection can only
+        // exist when nothing was typed, because selecting needs a click or a key that clears the buffer. Asking
+        // Accessibility only when there is no typed word keeps the common press off the slow path.
+        if !word.isEmpty {
             let converted = converter.convert(word)
             // Keep the converted word, so pressing the shortcut again converts it back.
             monitor.rememberConversion(converted)
             KeyInjector.replace(deleting: word.count, with: converted) { target.select() }
+        } else if let selection = SelectionReader.selectedText(), !selection.isEmpty {
+            monitor.typedWord = ""
+            // Replaces the selection, leaving the cursor at its end with nothing selected.
+            KeyInjector.replace(deleting: 0, with: converter.convert(selection)) { target.select() }
         } else {
             NSSound.beep()
         }
+    }
+
+    private func converter(from source: KeyboardLayout, to target: KeyboardLayout) -> LayoutConverter {
+        if let cached = cachedConverter, cached.source == source.id, cached.target == target.id {
+            return cached.converter
+        }
+        let converter = LayoutConverter(from: source, to: target)
+        cachedConverter = (source.id, target.id, converter)
+        return converter
     }
 
     private func startMonitoring() {
@@ -119,6 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.contentView = hostingView
             window.title = "LiteSwitcher"
             window.isReleasedWhenClosed = false
+            window.delegate = self
             // Size the window to the SwiftUI content, so there is no empty space below the last control.
             hostingView.layoutSubtreeIfNeeded()
             let fitted = hostingView.fittingSize
@@ -128,7 +149,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             settingsWindow = window
         }
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    /// Closing Settings while recording would leave the shortcut suspended and the app deaf to it, so stop recording.
+    func windowWillClose(_ notification: Notification) {
+        settings.cancelRecordingHotkey()
     }
 }

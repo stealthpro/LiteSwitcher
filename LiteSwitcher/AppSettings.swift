@@ -89,8 +89,17 @@ final class AppSettings: ObservableObject {
 
 /// "Start on login" via the system login-item service (macOS 13+).
 enum LaunchAtLogin {
+    /// Registered login items count as on even before the user approves them in System Settings.
     static var isEnabled: Bool {
-        SMAppService.mainApp.status == .enabled
+        switch SMAppService.mainApp.status {
+        case .enabled, .requiresApproval: true
+        default: false
+        }
+    }
+
+    /// True while the login item still needs the user's approval.
+    static var requiresApproval: Bool {
+        SMAppService.mainApp.status == .requiresApproval
     }
 
     static func setEnabled(_ enabled: Bool) throws {

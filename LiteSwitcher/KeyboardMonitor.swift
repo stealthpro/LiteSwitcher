@@ -17,6 +17,7 @@ final class KeyboardMonitor {
     var isSecureInputEnabled: () -> Bool = { IsSecureEventInputEnabled() }
 
     private var tap: CFMachPort?
+    private var runLoopSource: CFRunLoopSource?
     private var modifierComboHeld = false
     private var modifierComboUsedByKey = false
 
@@ -43,7 +44,9 @@ final class KeyboardMonitor {
         ) else { return false }
 
         self.tap = tap
-        CFRunLoopAddSource(CFRunLoopGetMain(), CFMachPortCreateRunLoopSource(nil, tap, 0), .commonModes)
+        let source = CFMachPortCreateRunLoopSource(nil, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        runLoopSource = source
         CGEvent.tapEnable(tap: tap, enable: true)
         return true
     }
@@ -128,8 +131,9 @@ final class KeyboardMonitor {
         trackTyping(keyCode: keyCode, modifiers: modifiers, text: event.unicodeString)
     }
 
-    /// Internal so tests can feed text without building a `CGEvent`.
-    func trackTyping(keyCode: UInt16, modifiers: NSEvent.ModifierFlags, text: String) {
+    /// Internal so tests can feed text without building a `CGEvent`. The text is an autoclosure because reading it
+    /// copies the event's characters, which is wasted for the keys that only move the cursor or delete.
+    func trackTyping(keyCode: UInt16, modifiers: NSEvent.ModifierFlags, text: @autoclosure () -> String) {
         // Shortcuts and secure input (passwords) are never remembered.
         if !modifiers.isDisjoint(with: [.command, .control]) || isSecureInputEnabled() {
             typedWord = ""
@@ -143,15 +147,18 @@ final class KeyboardMonitor {
              kVK_Home, kVK_End, kVK_PageUp, kVK_PageDown:
             typedWord = ""
         default:
-            guard !text.isEmpty else { return } // dead keys produce nothing until the next key
+            let typed = text()
+            guard !typed.isEmpty else { return } // dead keys produce nothing until the next key
             // Spaces stay in the text so `lastWord` can keep the spaces after a word; control characters (such as Return) end the text.
-            if text.unicodeScalars.contains(where: { $0.value < 0x20 }) {
+            if typed.unicodeScalars.contains(where: { $0.value < 0x20 }) {
                 typedWord = ""
             } else {
                 // Typing after a conversion starts a new phrase, so the converted text is left out of it.
                 if typedWordIsConverted { typedWord = "" }
                 typedWordIsConverted = false
-                typedWord = String((typedWord + text).suffix(1000))
+                typedWord += typed
+                // Keep the buffer bounded without copying it on every key press.
+                if typedWord.count > 1000 { typedWord = String(typedWord.suffix(1000)) }
             }
         }
     }

@@ -30,7 +30,8 @@ enum KeyInjector {
         var result: [String] = []
         var chunk = ""
         for character in text {
-            if chunk.utf16.count + character.utf16.count > maxUTF16 {
+            // The `isEmpty` check keeps a character that is longer than the limit from producing an empty chunk.
+            if !chunk.isEmpty, chunk.utf16.count + character.utf16.count > maxUTF16 {
                 result.append(chunk)
                 chunk = ""
             }
@@ -69,14 +70,20 @@ enum KeyInjector {
 /// Reads the text selected in the focused control, using the Accessibility API.
 enum SelectionReader {
     /// Seconds to wait for an app before giving up. Without a limit, a hung app would stall the main thread, and with it the event tap.
-    private static let messagingTimeout: Float = 1
+    /// Keep this short: the call runs on the main thread, so every second here is a second of frozen keyboard input.
+    private static let messagingTimeout: Float = 0.3
+
+    /// Created once and reused: building it and setting its timeout on every press is measurable work, and the
+    /// timeout stays configured for the lifetime of the element.
+    private static let systemElement: AXUIElement = {
+        let element = AXUIElementCreateSystemWide()
+        AXUIElementSetMessagingTimeout(element, messagingTimeout)
+        return element
+    }()
 
     static func selectedText() -> String? {
-        let system = AXUIElementCreateSystemWide()
-        AXUIElementSetMessagingTimeout(system, messagingTimeout)
-
         var focusedValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(system, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success,
+        guard AXUIElementCopyAttributeValue(systemElement, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success,
               let focused = focusedValue else { return nil }
 
         let element = focused as! AXUIElement
