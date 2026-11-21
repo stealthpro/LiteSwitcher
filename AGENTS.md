@@ -22,6 +22,10 @@ The version comes from `MARKETING_VERSION` in `LiteSwitcher.xcodeproj/project.pb
 
 The app is a menu bar app (`LSUIElement`): no Dock icon and no window. Quit it from its menu bar item or from the button in Settings.
 
+## Commits
+
+Commit messages describe the change and nothing else. Do not add `Co-Authored-By`, `Generated with`, session links, or any other tool or bot attribution trailer. This repository's history was rewritten once to strip them, so do not reintroduce them. Use the author's own name and email; never commit as a bot.
+
 ## Constraints
 
 - **Unsandboxed** (`ENABLE_APP_SANDBOX = NO`). The sandbox blocks the global event tap and posted key events.
